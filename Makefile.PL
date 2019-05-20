@@ -22,5 +22,7 @@ requires 'URI::Escape';
 requires 'JSON';
 requires 'Encode';
 requires 'MIME::Entity';
+requires 'URI::Query';
+requires 'Data::Dumper';
 
 WriteAll;
