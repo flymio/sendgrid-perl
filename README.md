@@ -1,7 +1,3 @@
-Please direct any questions to the [Developer Experience](mailto:dx@sendgrid.com) team.
-
-[![Build Status](https://travis-ci.org/sendgrid/sendgrid-perl.png?branch=master)](https://travis-ci.org/sendgrid/sendgrid-perl)
-
 #sendgrid-perl
 Send emails via SendGrid. Provides wrapper for custom SMTP API fields
 and allows for easy manipulation of filter/app settings.
