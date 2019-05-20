@@ -11,11 +11,13 @@ use LWP::UserAgent;
 use Mail::Address;
 use Sys::Hostname;
 use URI::Escape;
+use URI::Query;
 use JSON;
 use Encode;
 use Carp;
 use English qw( -no_match_vars ); 
 use Data::Dumper qw(Dumper);
+use HTTP::Request::Common;
 
 sub new
 {
@@ -122,6 +124,8 @@ sub deliver
   # Attachments
   foreach my $attach ( @$attachments )
   {
+
+
     my $filename = "attachment" . ++$i;
     my $data = $attach->{data};
     my %params;
@@ -140,8 +144,10 @@ sub deliver
     }
     my @path = split('/', $filename);
     my $file = $path[$#path];
-    $query .= "&files[" . uri_escape(encode('utf8', $file)) . "]=" . uri_escape(encode('utf8', $data));
+    $query .= "&files[" . uri_escape(encode('utf8', $file)) . "]=" . uri_escape(encode('utf8', $filename));
   }
+
+
 
   # Other headers (currently just message-id)
   my $additionalHeaders = {};
@@ -149,6 +155,8 @@ sub deliver
   $additionalHeaders->{'message-id'} = $messageId if ( defined($messageId) );
 
   $query .= "&headers=" . uri_escape(to_json($additionalHeaders, { ascii => 1})) if ( keys(%$additionalHeaders) );
+
+
   my $resp = $self->send($query);
 
   return undef if ( $resp->{message} eq "success" );
@@ -161,13 +169,70 @@ sub send
   my $self = shift;
   my $query = shift;
 
-  my $ua = LWP::UserAgent->new( timeout => $self->{timeout}, agent => 'sendgrid/' . $VERSION . ';perl' );
+  my ($url, $data) = $query =~ /^([^\?]+)\?(.*)$/;
 
+  $data =~ s/^&//sg;
+  my $dt = URI::Query->new($data);
+  $dt = $dt->hash_arrayref();
+
+  my $multipart = 0;
+  for(keys %{$dt}){
+    if ($_ =~ m/files/){
+      $multipart = 1;
+    }
+  }
+
+  my $ua = LWP::UserAgent->new( timeout => $self->{timeout}, agent => 'sendgrid/' . $VERSION . ';perl' );
   if ( defined($self->{api_key}) )
   {
     $ua->default_header('Authorization' => "Bearer $self->{api_key}");
   } 
-  my $response = $ua->get($query);
+  if ($multipart){
+    my @letter;
+    for(keys %{$dt}){
+      if ($_ =~ m/files/){
+        push(@letter, $_ => [$dt->{$_}->[0]])
+      }
+    }
+    for(keys %{$dt}){
+      if ($_ !~ m/files/){
+        for my $k(@{$dt->{$_}}){
+          $_ =~ s/[\]\[]//sg;
+          push(@letter, $_ => $k);
+        }
+      }
+    }
+
+    my $response = $ua->post(
+      $url,
+      Content_Type => 'form-data',
+      Content      => \@letter,
+    );
+
+    return { errors => [ $response->status_line() ] } if ( !$response->is_success );
+
+    my $content = $response->decoded_content();
+
+    my $resp;
+
+    eval {
+      $resp = from_json($content);
+    };
+    if ( $@ )
+    {
+      croak "malformed json response: $@";
+    }
+
+    return $resp;
+  }
+
+
+  my $req = HTTP::Request->new('POST', $url);
+  $req->content_type('application/x-www-form-urlencoded');
+  $req->content($data);
+
+
+  my $response = $ua->request($req);
 
   return { errors => [ $response->status_line() ] } if ( !$response->is_success );
 
