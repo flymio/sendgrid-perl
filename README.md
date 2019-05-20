@@ -1,7 +1,3 @@
-**IMPORTANT ANNOUNCEMENT**
-
-**As of May 1, 2016, SendGrid will no longer support this library.**
-
 Please direct any questions to the [Developer Experience](mailto:dx@sendgrid.com) team.
 
 [![Build Status](https://travis-ci.org/sendgrid/sendgrid-perl.png?branch=master)](https://travis-ci.org/sendgrid/sendgrid-perl)
@@ -19,7 +15,7 @@ Licensed under the MIT License.
 We are currently working on getting this module on CPAN. In the
 meantime, you can install from the included archive.
 
-    git clone https://github.com/sendgrid/sendgrid-perl.git
+    git clone https://github.com/flymio/sendgrid-perl.git
     cd sendgrid-perl
     sudo cpanm SendGrid-1.3.tar.gz
 
